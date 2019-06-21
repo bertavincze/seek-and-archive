@@ -33,6 +33,8 @@ namespace SeekAndArchive
             {
                 FileSystemWatcher newWatcher = new FileSystemWatcher(fil.DirectoryName, fil.Name);
                 newWatcher.Changed += new FileSystemEventHandler(WatcherChanged);
+                newWatcher.Renamed += new RenamedEventHandler(WatcherChanged);
+                newWatcher.Deleted += new FileSystemEventHandler(WatcherChanged);
                 newWatcher.EnableRaisingEvents = true;
                 Watchers.Add(newWatcher);
             }
@@ -61,6 +63,15 @@ namespace SeekAndArchive
             if (e.ChangeType == WatcherChangeTypes.Changed)
             {
                 Console.WriteLine("{0} has been changed!", e.FullPath);
+            }
+            else if (e.ChangeType == WatcherChangeTypes.Renamed)
+            {
+                Console.WriteLine("{0} has been renamed!", e.FullPath);
+            }
+            else if (e.ChangeType == WatcherChangeTypes.Deleted)
+            {
+                Console.WriteLine("{0} has been deleted!", e.FullPath);
+                Watchers.Remove(((FileSystemWatcher)sender));
             }
         }
     }
