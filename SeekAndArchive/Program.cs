@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 
 namespace SeekAndArchive
 {
@@ -39,11 +40,18 @@ namespace SeekAndArchive
                 Watchers.Add(newWatcher);
             }
 
+            ArchiveDirs = new List<DirectoryInfo>();
+            for (int i = 0; i < FoundFiles.Count; i++)
+            {
+                ArchiveDirs.Add(Directory.CreateDirectory("archive" + i.ToString()));
+            }
+
             Console.ReadKey();
         }
 
         public static List<FileInfo> FoundFiles { get; set; }
         public static List<FileSystemWatcher> Watchers { get; set; }
+        public static List<DirectoryInfo> ArchiveDirs { get; set; }
 
         static void RecursiveSearch(List<FileInfo> foundFiles, string fileName, DirectoryInfo currentDirectory)
         {
@@ -60,9 +68,14 @@ namespace SeekAndArchive
 
         static void WatcherChanged(object sender, FileSystemEventArgs e)
         {
+            FileSystemWatcher senderWatcher = (FileSystemWatcher)sender;
+            int index = Watchers.IndexOf(senderWatcher);
+
             if (e.ChangeType == WatcherChangeTypes.Changed)
             {
                 Console.WriteLine("{0} has been changed!", e.FullPath);
+                ArchiveFile(ArchiveDirs[index], FoundFiles[index]);
+                Console.WriteLine("Archived to {0}", ArchiveDirs[index].GetFiles()[0].FullName);
             }
             else if (e.ChangeType == WatcherChangeTypes.Renamed)
             {
@@ -71,8 +84,26 @@ namespace SeekAndArchive
             else if (e.ChangeType == WatcherChangeTypes.Deleted)
             {
                 Console.WriteLine("{0} has been deleted!", e.FullPath);
-                Watchers.Remove(((FileSystemWatcher)sender));
+                Watchers.Remove(senderWatcher);
             }
+        }
+
+        static void ArchiveFile(DirectoryInfo archiveDir, FileInfo fileToArchive)
+        {
+            FileStream input = new FileStream(fileToArchive.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            FileStream output = File.Create(archiveDir.FullName + "\\" + fileToArchive.Name + ".gz");
+            GZipStream Compressor = new GZipStream(output, CompressionMode.Compress);
+            int b = input.ReadByte();
+
+            while (b != -1)
+            {
+                Compressor.WriteByte((byte)b);
+                b = input.ReadByte();
+            }
+
+            Compressor.Close();
+            input.Close();
+            output.Close();
         }
     }
 }
